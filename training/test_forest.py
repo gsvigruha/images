@@ -134,7 +134,7 @@ conv_7 = tf.keras.layers.Conv2D(32, kernel_size=(3, 3),
 pool_8 = tf.keras.layers.MaxPooling2D((4, 4))(conv_7)
 
 
-do_83 = tf.keras.layers.Dropout(0.5)(pool_8)
+do_83 = tf.keras.layers.Dropout(0.25)(pool_8)
 
 flatten_1 = tf.keras.layers.Flatten()(do_83)
 
