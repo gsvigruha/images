@@ -100,37 +100,41 @@ pool_21 = tf.keras.layers.AveragePooling2D((2, 2))(conv_11)
 
 do_2 = tf.keras.layers.Dropout(0.1)(pool_21)
 
-conv_22 = tf.keras.layers.Conv2D(8, kernel_size=(3, 3),
+conv_22 = tf.keras.layers.Conv2D(16, kernel_size=(3, 3),
                  activation='relu', padding='same',
                  kernel_initializer='he_normal')(do_2)
 pool_23 = tf.keras.layers.MaxPooling2D((2, 2))(conv_22)
 
+do_21 = tf.keras.layers.Dropout(0.1)(pool_23)
 
 conv_24 = tf.keras.layers.Conv2D(16, kernel_size=(3, 3),
                  activation='relu', padding='same',
-                 kernel_initializer='he_normal')(pool_23)
+                 kernel_initializer='he_normal')(do_21)
 pool_25 = tf.keras.layers.AveragePooling2D((2, 2))(conv_24)
 
-do_43 = tf.keras.layers.Dropout(0.1)(pool_25)
+do_3 = tf.keras.layers.Dropout(0.2)(pool_25)
 
-conv_3 = tf.keras.layers.Conv2D(8, kernel_size=(3, 3),
+conv_3 = tf.keras.layers.Conv2D(16, kernel_size=(3, 3),
                  activation='relu', padding='same',
-                 kernel_initializer='he_normal')(do_43)
+                 kernel_initializer='he_normal')(do_3)
 pool_4 = tf.keras.layers.MaxPooling2D((2, 2))(conv_3)
 
+do_4 = tf.keras.layers.Dropout(0.2)(pool_4)
 
 conv_51 = tf.keras.layers.Conv2D(16, kernel_size=(3, 3),
                  activation='relu', padding='same',
-                 kernel_initializer='he_normal')(pool_4)
+                 kernel_initializer='he_normal')(do_4)
 pool_61 = tf.keras.layers.AveragePooling2D((4, 4))(conv_51)
 
+do_43 = tf.keras.layers.Dropout(0.25)(pool_61)
 
 conv_7 = tf.keras.layers.Conv2D(32, kernel_size=(3, 3),
                  activation='relu', padding='same',
-                 kernel_initializer='he_normal')(pool_61)
+                 kernel_initializer='he_normal')(do_43)
 pool_8 = tf.keras.layers.MaxPooling2D((4, 4))(conv_7)
 
-do_83 = tf.keras.layers.Dropout(0.2)(pool_8)
+
+do_83 = tf.keras.layers.Dropout(0.5)(pool_8)
 
 flatten_1 = tf.keras.layers.Flatten()(do_83)
 
@@ -146,7 +150,11 @@ model1.summary()
 
 test_dataset = tf.data.Dataset.from_tensor_slices((tf.constant(test_x), tf.constant(test_y)))
 test_dataset = test_dataset.map(partial(_parse_function, sx=256, sy=256)).map(_vector).cache().batch(10).repeat()
-model1.fit(train_dataset, epochs=70, steps_per_epoch=32, validation_data=test_dataset, validation_steps=40)
+
+callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=50),
+             tf.keras.callbacks.ModelCheckpoint(filepath='callbacks.c3.best.h5', monitor='val_loss', save_best_only=True)]
+
+model1.fit(train_dataset, epochs=100, steps_per_epoch=32, validation_data=test_dataset, validation_steps=40, callbacks=callbacks)
 
 
 #loss, acc = model.evaluate(test_dataset.map(_vector).batch(40), steps=20)
