@@ -28,14 +28,14 @@ def _parse_function(filename):
 sess = tf.Session('', tf.Graph())
 models = {}
 with sess.graph.as_default():
-    models['forest']   = {'model': tf.keras.models.load_model('/home/gsvigruha/images/forest.model.c3.h5')}
-    models['meadow']   = {'model': tf.keras.models.load_model('/home/gsvigruha/images/meadow.model.c3.h5')}
-    models['mountain'] = {'model': tf.keras.models.load_model('/home/gsvigruha/images/mountain.model.c3.h5')}
-    models['urban']    = {'model': tf.keras.models.load_model('/home/gsvigruha/images/urban.model.c3.h5')}
-    models['water']    = {'model': tf.keras.models.load_model('/home/gsvigruha/images/water.model.c3.h5')}
-    models['desert']   = {'model': tf.keras.models.load_model('/home/gsvigruha/images/desert.model.c3.h5')}
+    models['forest']   = {'model': tf.keras.models.load_model('models/forest.model.c3.h5')}
+    models['meadow']   = {'model': tf.keras.models.load_model('models/meadow.model.c3.h5')}
+    models['mountain'] = {'model': tf.keras.models.load_model('models/mountain.model.c3.h5')}
+    models['urban']    = {'model': tf.keras.models.load_model('models/urban.model.c3.h5')}
+    models['water']    = {'model': tf.keras.models.load_model('models/water.model.c3.h5')}
+    models['desert']   = {'model': tf.keras.models.load_model('models/desert.model.c3.h5')}
     models['lighting'] = {
-        'model': tf.keras.models.load_model('/home/gsvigruha/images/lighting.model.c3.h5'),
+        'model': tf.keras.models.load_model('models/lighting.model.c3.h5'),
         'labels': ['night', 'sunset', 'rainy', 'day']
     }
 
