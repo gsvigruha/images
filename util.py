@@ -11,14 +11,17 @@ def _extract_freq(img, range_from, range_to, parts=1):
   r = tf.squeeze(r)
   g = tf.squeeze(g)
   b = tf.squeeze(b)
-  y = tf.math.maximum(r + g - b, 0.0) / 2.0
-  p = tf.math.maximum(r + b - g, 0.0) / 2.0
-  c = tf.math.maximum(g + b - r, 0.0) / 2.0
+  k = 1.0 - tf.math.maximum(tf.math.maximum(r, g), b)
+  y = (1.0 - b - k) / tf.maximum(1.0 - k, 1e-6)
+  p = (1.0 - g - k) / tf.maximum(1.0 - k, 1e-6)
+  c = (1.0 - r - k) / tf.maximum(1.0 - k, 1e-6)
+  w = (r + b + g) / 3.0
   
   const = tf.constant([float(x + 1) for x in range(0, 256)])
   r_f = tf.math.abs(tf.spectral.dct(r)[:,range_from:range_to]) * const[range_from:range_to] / 256.0
   g_f = tf.math.abs(tf.spectral.dct(g)[:,range_from:range_to]) * const[range_from:range_to] / 256.0
   b_f = tf.math.abs(tf.spectral.dct(b)[:,range_from:range_to]) * const[range_from:range_to] / 256.0
+  w_f = tf.math.abs(tf.spectral.dct(w)[:,range_from:range_to]) * const[range_from:range_to] / 256.0
   y_f = tf.math.abs(tf.spectral.dct(y)[:,range_from:range_to]) * const[range_from:range_to] / 256.0
   p_f = tf.math.abs(tf.spectral.dct(p)[:,range_from:range_to]) * const[range_from:range_to] / 256.0
   c_f = tf.math.abs(tf.spectral.dct(c)[:,range_from:range_to]) * const[range_from:range_to] / 256.0
@@ -31,15 +34,16 @@ def _extract_freq(img, range_from, range_to, parts=1):
       tf.math.reduce_mean(r_f[l:h]),
       tf.math.reduce_mean(g_f[l:h]),
       tf.math.reduce_mean(b_f[l:h]),
-      tf.math.reduce_mean(y_f[l:h]),
-      tf.math.reduce_mean(p_f[l:h]),
-      tf.math.reduce_mean(c_f[l:h])
+      tf.math.reduce_mean(w_f[l:h])
+    #  tf.math.reduce_mean(y_f[l:h])
+    #  tf.math.reduce_mean(p_f[l:h]),
+    #  tf.math.reduce_mean(c_f[l:h])
     ])
   return result
 
 
-def freq_hist(img, py=1, px=1):
-  
+def freq_hist(img, py=1, px=1, ranges=ranges):
+  img = img / 255.0
   result = []
   r_l = 0
   for r_u in ranges:
@@ -71,7 +75,7 @@ def color_hist(img):
         hist_entries.append(tf.reduce_sum(tf.cast(logical_fn, tf.float32))) 
 
   tf_v = tf.stack(hist_entries)
-  return tf_v / tf.reduce_sum(tf_v)
+  return tf_v / tf.maximum(tf.reduce_sum(tf_v), tf.constant(1.0))
 
 
 def hsv_hist(img):
@@ -89,6 +93,17 @@ def hsv_hist(img):
   return tf.concat([h_h, v_h, s_h], axis=0)
 
 
+def bb(mask):
+  indices_y = tf.expand_dims(tf.range(256, delta=1, dtype=tf.int32), 1)
+  masked_indices_y_low = tf.math.add((mask - 1.0) * -256, tf.to_float(indices_y))
+  masked_indices_y_high = tf.math.add((mask - 1.0) * 256, tf.to_float(indices_y))
+
+  indices_x = tf.transpose(indices_y)
+  masked_indices_x_low = tf.math.add((mask - 1.0) * -256, tf.to_float(indices_x))
+  masked_indices_x_high = tf.math.add((mask - 1.0) * 256, tf.to_float(indices_x))
+  return tf.reduce_min(masked_indices_x_low), tf.reduce_max(masked_indices_x_high), tf.reduce_min(masked_indices_y_low), tf.reduce_max(masked_indices_y_high)
+
+
 def comps(img, threshold=0.2):
   with tf.device('/cpu:0'):
     img = img / 255.0
@@ -98,18 +113,43 @@ def comps(img, threshold=0.2):
     dy = tf.reduce_sum(tf.math.abs(dy), axis=3) / 3.0
     dx = tf.reduce_sum(tf.math.abs(dx), axis=3) / 3.0
     edges = tf.math.maximum(tf.squeeze(dy), tf.squeeze(dx))
-  #w = tf.reduce_sum(img, axis=2) / 3.0 * -0.5 + 1.0
 
     flat = tf.less(edges, threshold)  
     comps = tf.contrib.image.connected_components(flat)
-    c = tf.math.bincount(tf.reshape(comps, [256 * 256]), minlength=6, maxlength=256*256)[1:]
-    cnt = tf.math.top_k(c, 5).indices
-  
+    c = tf.math.bincount(tf.reshape(comps, [256 * 256]), minlength=6)[1:]
+    cnt = tf.math.top_k(c, 5)
+
     r = []
     for i in range(0, 4):
-      mask = tf.expand_dims(tf.to_float(tf.equal(tf.fill([256, 256], tf.squeeze(cnt[i] + 1)), comps)), 2)
-      r.append(tf.math.multiply(img, mask))
-    
+      flat_mask = tf.to_float(tf.equal(tf.fill([256, 256], tf.squeeze(cnt.indices[i]) + 1), comps))
+      mask = tf.expand_dims(flat_mask, 2)
+      meta = tf.squeeze(tf.stack(list(bb(flat_mask)) + [tf.to_float(cnt.values[i])], axis=0))
+      r.append((tf.math.multiply(img, mask), meta))
+
   return r
+
+
+def sky(img, thresholds=[0.2, 0.33, 0.5]):
+  c = []
+  for t in thresholds:
+    c.extend(comps(img, t))
+  metas = tf.stack([x[1] for x in c], axis=0)
+  zeros = tf.stack([0.0 for _ in c], axis=0)
+  sizes = tf.squeeze(metas[:,4:5])
+  min_y = tf.squeeze(metas[:,2:3])
+  cond = tf.logical_and(
+    tf.equal(min_y, zeros),
+    tf.logical_and(
+      tf.greater(sizes, tf.stack([256 * 256 / 16 for _ in c], axis=0)),
+      tf.less(sizes, tf.stack([256 * 256 / 4 for _ in c], axis=0))
+  ))
+  filtered = tf.where(cond, sizes, zeros)
+  cnt = tf.math.top_k(filtered, 1)
+  return tf.stack([x[0] for x in c])[cnt.indices[0]]
   
+
+def regions(img):
+  by_y = tf.stack(tf.split(img, 4, 0), 0)
+  by_x = tf.stack(tf.split(by_y, 4, 2), 0)
+  return tf.reshape(by_x, [16, 64, 64, 3])
 

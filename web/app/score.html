@@ -1,0 +1,37 @@
+<div class="p-4">
+  <form>
+    <div class="form-group col-xs-2">
+      <label>Enter the URL of the image:</label>
+      <input type="text" class="form-control" style="width:70%" ng-model="url"/>
+    </div>
+    <div class="form-group col-xs-2">
+      <label>Enter the model types, comma separated:</label>
+      <input type="text" class="form-control" style="width:70%" ng-model="models"/>
+    </div>
+    <div class="form-group">
+      <button type="submit" class="btn btn-primary m-2" ng-click="score();" title="Score">Score</button>
+    </div>
+  </form>
+  <div class="row p-2" style="width:80%">
+    <img src="{{ result.url }}">
+  </div>
+  <div class="row p-2" style="width:80%" ng-if="$error">
+    {{ $error }}
+  </div>
+  <div class="p-2">
+    <table class=".table .table-bordered .table-striped">
+      <thead>
+      <tr>
+        <th class="pl-2">Label</th>
+        <th class="pl-2">Score</th>
+      </tr>
+      </thead>
+      <tbody>
+      <tr ng-repeat="(key, value) in result.predictions">
+        <td class="pl-2">{{key}}</td>
+        <td class="pl-2">{{value | number : 3}}</td> 
+      </tr>
+      </tbody>
+    </table>
+  </div>
+</div>

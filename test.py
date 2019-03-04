@@ -25,16 +25,17 @@ def _load_dirs(ds):
   def _load_dir(d):
     for f in os.listdir(d):
       if (f.lower().endswith('.jpg') or f.lower().endswith('.jpeg')):
-        test = random.random() < 0.2
-        files.append((d + '/' + f, d[d.rfind('/')+1:], test))
+        files.append((d + '/' + f, d[d.rfind('/')+1:]))
   for d in ds:
     _load_dir(d)
   random.shuffle(files)
+  train_files = files[:-800]
+  test_files = files[-800:]
 
-  train_x = [f[0] for f in files if not f[2]]
-  train_y = [label_map[f[1]] for f in files if not f[2]]
-  test_x  = [f[0] for f in files if f[2]]
-  test_y  = [label_map[f[1]] for f in files if f[2]]
+  train_x = [f[0] for f in train_files]
+  train_y = [label_map[f[1]] for f in train_files]
+  test_x  = [f[0] for f in test_files]
+  test_y  = [label_map[f[1]] for f in test_files]
   print(len(train_y), len(test_y))
   return train_x, train_y, test_x, test_y
 
@@ -48,11 +49,15 @@ train_x, train_y, test_x, test_y = _load_dirs([
 
 
 def _vector(img, label):
+ # sky = util.sky(img)
   return tf.concat([
     util.color_hist(img[0:96,:,:]),
     util.color_hist(img[80:176,:,:]),
     util.color_hist(img[160:256,:,:]),
-    util.freq_hist(img/ 255.0, 3, 1),
+    util.freq_hist(img, 3, 1),
+    util.hsv_hist(img)
+  #  util.color_hist(sky),
+  #  util.freq_hist(sky)
    # util.hsv_hist(img)
    # util.hsv_hist(img[0:96,:,:]),
    # util.hsv_hist(img[80:176,:,:]),
@@ -68,6 +73,8 @@ train_dataset = train_dataset.map(_parse_function).map(_vector).cache().batch(10
 
 dim = (64*3 + 
        8*6*1 + 8*6*3
+       +48
+      # +64 + 8*6*2
        #48*3 
 )
        #2*3*32)
@@ -85,7 +92,7 @@ model.compile(optimizer=tf.train.AdamOptimizer(0.005),
 
 
 
-model.fit(train_dataset, epochs=50, steps_per_epoch=32)
+model.fit(train_dataset, epochs=30, steps_per_epoch=32)
 
 #loss, acc = model.evaluate(test_dataset.map(_vector).batch(40), steps=20)
 #print(f'loss {loss}, acc {acc}')

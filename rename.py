@@ -1,6 +1,6 @@
 import os
 
-d='/home/gsvigruha/images/lighting/day'
+d='/home/gsvigruha/images/landscape/urban/city_european'
 l=os.listdir(d)
 i = 0
 for f in l:
