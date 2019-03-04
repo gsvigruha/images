@@ -152,7 +152,7 @@ test_dataset = tf.data.Dataset.from_tensor_slices((tf.constant(test_x), tf.const
 test_dataset = test_dataset.map(partial(_parse_function, sx=256, sy=256)).map(_vector).cache().batch(10).repeat()
 
 callbacks = [tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=50),
-             tf.keras.callbacks.ModelCheckpoint(filepath='callbacks.c3.best.h5', monitor='val_loss', save_best_only=True)]
+             tf.keras.callbacks.ModelCheckpoint(filepath='forest.c3.best.h5', monitor='val_loss', save_best_only=True)]
 
 model1.fit(train_dataset, epochs=100, steps_per_epoch=32, validation_data=test_dataset, validation_steps=40, callbacks=callbacks)
 
