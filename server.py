@@ -10,7 +10,10 @@ import numpy as np
 import time
 import json
 
+import os
 
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"   # see issue #152
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 size =256
 
@@ -26,6 +29,7 @@ def _parse_function(filename):
   return tf.stack([img], axis=0)
 
 sess = tf.Session('', tf.Graph())
+
 models = {}
 with sess.graph.as_default():
     models['forest']   = {'model': tf.keras.models.load_model('models/forest.model.c3.h5')}
